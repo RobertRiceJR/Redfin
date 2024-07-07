@@ -5,7 +5,16 @@ from datetime import datetime
 
 def scrape_data(url):
     try:
-        response = requests.get(url)
+        url = 'https://www.zillow.com/homes/Elmhurst,-IL_rb/'
+        headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+        soup = BeautifulSoup(response.content, 'html.parser')
+    # Process the soup object as needed
+        else:
+    print(f"Failed to retrieve the webpage. Status code: {response.status_code}")
+    print(f"Failed to retrieve the webpage. Status code: {response.status_code}"))
         response.raise_for_status()  # Check for HTTP errors
         soup = BeautifulSoup(response.text, 'html.parser')
         data = []
@@ -24,7 +33,7 @@ def scrape_data(url):
         print(f"Error fetching data from {url}: {e}")
         return []
 
-url = 'https://www.example.com/rentals'
+# url = 'https://www.zillow.com/elmhurst-il/?searchQueryState=%7B%22pagination%22%3A%7B%7D%2C%22usersSearchTerm%22%3A%22Elmhurst%20IL%22%2C%22mapBounds%22%3A%7B%22west%22%3A-88.04844840820313%2C%22east%22%3A-87.83696159179688%2C%22south%22%3A41.831501411885704%2C%22north%22%3A41.95928010973851%7D%2C%22regionSelection%22%3A%5B%7B%22regionId%22%3A4568%2C%22regionType%22%3A6%7D%5D%2C%22isMapVisible%22%3Atrue%2C%22filterState%22%3A%7B%22sort%22%3A%7B%22value%22%3A%22globalrelevanceex%22%7D%2C%22ah%22%3A%7B%22value%22%3Atrue%7D%2C%22mf%22%3A%7B%22value%22%3Afalse%7D%2C%22land%22%3A%7B%22value%22%3Afalse%7D%2C%22manu%22%3A%7B%22value%22%3Afalse%7D%2C%22apa%22%3A%7B%22value%22%3Afalse%7D%2C%22apco%22%3A%7B%22value%22%3Afalse%7D%7D%2C%22isListVisible%22%3Atrue%2C%22mapZoom%22%3A12%7D'
 rental_data = scrape_data(url)
 
 print(rental_data)
