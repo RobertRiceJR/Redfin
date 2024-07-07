@@ -1,0 +1,67 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
+import pandas as pd
+import time
+
+def scrape_zillow():
+    options = Options()
+    options.headless = False  # Run in full mode to maximize window
+    options.add_argument("--window-size=1920x1080")
+    options.add_argument("--disable-gpu")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.maximize_window()  # Maximize the browser window
+    url = 'https://www.zillow.com/homes/Elmhurst,-IL_rb/'
+    driver.get(url)
+
+    # Wait for the page to fully load
+    WebDriverWait(driver, 10).until(
+        lambda driver: driver.execute_script('return document.readyState') == 'complete'
+    )
+
+    # Scroll to the bottom to load all elements
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    while True:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)  # Wait for new elements to load
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
+    content = driver.page_source
+    soup = BeautifulSoup(content, 'html.parser')
+    driver.quit()
+
+    listings = []
+    for article in soup.find_all('article', {'data-test': 'property-card'}):
+        try:
+            address = article.find('address').text if article.find('address') else None
+            rent = article.find('span', {'data-test': 'property-card-price'}).text if article.find('span', {'data-test': 'property-card-price'}) else None
+            details = article.find_all('li')  # Find all 'li' elements within the article
+            
+            bedrooms = bathrooms = sqft = None
+            for detail in details:
+                if 'bd' in detail.text:
+                    bedrooms = detail.text.split(' ')[0]
+                elif 'ba' in detail.text:
+                    bathrooms = detail.text.split(' ')[0]
+                elif 'sqft' in detail.text:
+                    sqft = detail.text.split(' ')[0]
+                    
+            listings.append([address, rent, bedrooms, bathrooms, sqft])
+        except AttributeError:
+            continue
+
+    df = pd.DataFrame(listings, columns=['Address', 'Rent', 'Bedrooms', 'Bathrooms', 'Square Footage'])
+    return df
+
+df = scrape_zillow()
+df.to_csv('zillow_rentals.csv', index=False)
+print(df.head())
