@@ -1,0 +1,34 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime
+
+def scrape_data(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Check for HTTP errors
+        soup = BeautifulSoup(response.text, 'html.parser')
+        data = []
+        for listing in soup.find_all('div', class_='listing'):
+            try:
+                address = listing.find('div', class_='address').text
+                rent = listing.find('div', class_='price').text
+                bedrooms = listing.find('div', class_='bedrooms').text
+                bathrooms = listing.find('div', class_='bathrooms').text
+                sqft = listing.find('div', class_='square-feet').text
+                data.append([address, rent, bedrooms, bathrooms, sqft])
+            except AttributeError as e:
+                print(f"Missing data in listing: {e}")
+        return data
+    except requests.RequestException as e:
+        print(f"Error fetching data from {url}: {e}")
+        return []
+
+url = 'https://www.example.com/rentals'
+rental_data = scrape_data(url)
+
+print(rental_data)
+# # Convert to DataFrame with validation
+# df = pd.DataFrame(rental_data, columns=['Address', 'Rent', 'Bedrooms', 'Bathrooms', 'Square Footage'])
+# df.dropna(inplace=True)  # Drop rows with missing values
+# df.to_csv('rental_data.csv', index=False)
