@@ -1,0 +1,74 @@
+import requests
+from bs4 import BeautifulSoup
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+# Configuration
+SEARCH_URL = 'https://www.redfin.com/city/29470/IL/Chicago/filter/include=sold-3mo+fsbo+mlsfsbo+construction+foreclosed+for_sale+foreclosed+pending+contingent+coming_soon+recently_sold'
+EMAIL_SENDER = 'your_email@example.com'
+EMAIL_PASSWORD = 'your_password'
+EMAIL_RECIPIENT = 'recipient@example.com'
+SMTP_SERVER = 'smtp.example.com'
+SMTP_PORT = 587
+
+# Fetch data from Redfin
+def fetch_redfin_data():
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    response = requests.get(SEARCH_URL, headers=headers)
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, 'html.parser')
+        properties = []
+        listings = soup.find_all('div', class_='HomeCardContainer')
+        for listing in listings:
+            address_tag = listing.find('span', class_='homeAddressV2')
+            price_tag = listing.find('span', class_='homecardV2Price')
+            
+            address = address_tag.get_text() if address_tag else 'N/A'
+            price = price_tag.get_text() if price_tag else 'N/A'
+            
+            properties.append({'address': address, 'price': price})
+        return properties
+    else:
+        print(f"Failed to fetch data: {response.status_code}")
+        return None
+
+# Send email
+def send_email(properties):
+    # Create the email content
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = EMAIL_RECIPIENT
+    msg['Subject'] = 'Redfin Property Updates'
+
+    body = 'Here are the latest properties:\n\n'
+    for property in properties:
+        body += f"Address: {property['address']}\nPrice: {property['price']}\n\n"
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Send the email
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(EMAIL_SENDER, EMAIL_RECIPIENT, text)
+        server.quit()
+        print("Email sent successfully.")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+# Main task
+def main():
+    properties = fetch_redfin_data()
+    if properties:
+        send_email(properties)
+    else:
+        print('Failed to fetch data from Redfin.')
+
+# Run the main task
+if __name__ == '__main__':
+    main()
